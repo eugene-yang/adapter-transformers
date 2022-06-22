@@ -181,11 +181,13 @@ class AdapterTrainer(Trainer):
             pass
         else:
             if os.path.isdir(resume_from_checkpoint):
+                device = self.model.device
                 adapter_loaded = self._load_adapters(resume_from_checkpoint)
                 self._load_adapter_fusions(resume_from_checkpoint)
                 # Save all heads for a model with heads
                 if hasattr(self.model, "heads"):
                     self._load_heads(resume_from_checkpoint)
+                self.model.to(device)
 
             if not adapter_loaded:
                 raise Exception("Can't find a valid checkpoint at {}".format(resume_from_checkpoint))
