@@ -3,7 +3,7 @@ import os
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from os.path import join
+from os.path import exists, join
 from typing import Iterable, List, Optional, Tuple, Union
 
 import torch
@@ -552,6 +552,8 @@ class ModelAdaptersMixin(PushAdapterToHubMixin, ABC):
         Args:
             save_directory (str): Path to a directory where the adapters should be saved.
         """
+        if not exists(save_directory):
+            os.mkdir(save_directory)
         for name in self.config.adapters:
             adapter_config = self.config.adapters.get(name)
             h = get_adapter_config_hash(adapter_config)
