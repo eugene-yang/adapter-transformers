@@ -3,7 +3,7 @@ import os
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from os.path import exists, join
+from os.path import join
 from typing import Iterable, List, Optional, Tuple, Union
 
 import torch
