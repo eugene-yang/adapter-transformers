@@ -201,7 +201,7 @@ class PrefixTuningPool(nn.Module):
         prefix_states = {}
         if adapter_setup is not None:
             # Infer batch size
-            input_tensor_names = ["input_ids", "decoder_input_ids", "attention_mask", "inputs_embeds"]
+            input_tensor_names = ["input_ids", "decoder_input_ids", "attention_mask", "inputs_embeds", "pixel_values"]
             batch_size = None
             for name in input_tensor_names:
                 if kwargs.get(name, None) is not None:
@@ -278,7 +278,9 @@ class PrefixTuningShim(AdapterLayerBase, nn.Module):
     def get_adapter(self, adapter_name):
         # Make sure to only return params once
         if adapter_name in self.prefixes and self.prefixes[adapter_name] == 0:
-            return self.pool.get_prefix(adapter_name)
+            prefix_module = self.pool.get_prefix(adapter_name)
+            if prefix_module is not None:
+                return prefix_module[self.location_key]
 
         return None
 

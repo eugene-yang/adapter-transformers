@@ -24,7 +24,7 @@ For this purpose, there typically exists a module `src/transformers/adapters/mix
 
 - Add a new `<model_type>.py` module for your architecture in `src/transformers/adapters/mixins` (or reuse an existing if possible).
     - There usually exists a mixin on the Transformer layer level that derives that holds modules for adapter layers.
-    - The mixin for the whole base model class (e.g. `BertModel`) should derive from `ModelAdaptersMixin` and (if possible) `InvertibleAdaptersMixin`. This mixin should at least implement the `iter_layers()` method but might require additional modifications depending on the architecture.
+    - The mixin for the whole base model class (e.g. `BertModel`) should derive from `ModelAdaptersMixin` and (if possible) `EmbeddingAdaptersMixin` and/or `InvertibleAdaptersMixin`. This mixin should at least implement the `iter_layers()` method but might require additional modifications depending on the architecture.
     - Have a look at existing examples, e.g. `distilbert.py`, `bert.py`.
 - Implement the mixins and the required modifications on the modeling classes (`modeling_<model_type>.py`).
     - Make sure the calls to `adapter_layer_forward()` are added in the right places.
@@ -72,8 +72,8 @@ This class allows flexible adding of and switching between multiple prediction h
 
 **📝 Steps**
 
-- Add `adapter_docs/classes/models/<model_type>.rst` (oriented at the doc file in the HF docs). Make sure to include `<model_type>AdapterModel` autodoc. 
-Finally, list the file in `index.rst`.
+- Add `adapter_docs/classes/models/<model_type>.rst` (oriented at the doc file in the HF docs). Make sure to include `<model_type>AdapterModel` autodoc. Finally, list the file in `index.rst`.
+- Add a new row for the model in the model table of the overview page at `adapter_docs/model_overview.md`, listing all the methods implemented by the new model.
 
 ## Training Example Adapters
 

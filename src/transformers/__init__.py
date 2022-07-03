@@ -22,7 +22,7 @@
 # to defer the actual importing for when the objects are requested. This way `import transformers` provides the names
 # in the namespace without actually importing anything (and especially none of the backends).
 
-__version__ = "4.19.2"
+__version__ = "4.19.4"
 
 from typing import TYPE_CHECKING
 
@@ -1821,6 +1821,7 @@ if is_torch_available():
         "DistilBertAdapterModel",
         "DistilBertModelWithHeads",
         "DynamicAdapterFusionConfig",
+        "EmbeddingAdaptersMixin",
         "ForwardContext",
         "GPT2AdapterModel",
         "GPT2ModelWithHeads",
@@ -1846,6 +1847,7 @@ if is_torch_available():
         "StaticAdapterFusionConfig",
         "T5AdapterModel",
         "T5ModelWithHeads",
+        "ViTAdapterModel",
         "XLMRobertaAdapterModel",
         "XLMRobertaModelWithHeads",
         "get_adapter_config_hash",
@@ -4115,6 +4117,7 @@ if TYPE_CHECKING:
             DistilBertAdapterModel,
             DistilBertModelWithHeads,
             DynamicAdapterFusionConfig,
+            EmbeddingAdaptersMixin,
             ForwardContext,
             GPT2AdapterModel,
             GPT2ModelWithHeads,
@@ -4140,6 +4143,7 @@ if TYPE_CHECKING:
             StaticAdapterFusionConfig,
             T5AdapterModel,
             T5ModelWithHeads,
+            ViTAdapterModel,
             XLMRobertaAdapterModel,
             XLMRobertaModelWithHeads,
             get_adapter_config_hash,
