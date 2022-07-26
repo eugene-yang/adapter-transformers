@@ -167,7 +167,9 @@ class EmbeddingAdaptersMixin:
             for t in tokens:
                 idx_reference = reference_vocab[t]
                 idx = vocab[t]
-                embedding.weight[idx] = self.loaded_embeddings[reference_embedding].weight[idx_reference].clone()
+                embedding.weight[idx] = (
+                    self.loaded_embeddings[reference_embedding].weight[idx_reference].detach().clone()
+                )
         embedding.train(False)
         self.loaded_embeddings[name] = embedding
         self.set_active_embeddings(name)
@@ -224,6 +226,31 @@ class EmbeddingAdaptersMixin:
         return self._active_embedding
 
 
+class EmbeddingAdaptersWrapperMixin:
+    def load_embeddings(self, path: str, name: str):
+        return self.base_model.load_embeddings(path, name)
+
+    def add_embeddings(self, name, tokenizer, reference_embedding=None, reference_tokenizer=None, embedding_dim=None):
+        return self.base_model.add_embeddings(name, tokenizer, reference_embedding, reference_tokenizer, embedding_dim)
+
+    def delete_embeddings(self, name):
+        return self.base_model.delete_embeddings(name)
+
+    def save_embeddings(self, path, name, tokenizer=None):
+        return self.base_model.save_embeddings(path, name, tokenizer)
+
+    def set_active_embeddings(self, name):
+        return self.base_model.set_active_embeddings(name)
+
+    @property
+    def active_embeddings(self):
+        return self.base_model.active_embeddings
+
+    @property
+    def loaded_embeddings(self):
+        return self.base_model.loaded_embeddings
+
+
 class ModelAdaptersMixin(PushAdapterToHubMixin, ABC):
     """Mixin for transformer models adding support for loading/ saving adapters."""
 
@@ -253,7 +280,7 @@ class ModelAdaptersMixin(PushAdapterToHubMixin, ABC):
 
         # Initialize adapters from config
         for adapter_name in self.config.adapters:
-            self.apply_to_adapter_layers(lambda i, layer: layer.add_adapter(adapter_name, i))
+            self._add_adapter_weights(adapter_name)
         # Initialize fusion from config
         for fusion_name in self.config.adapters.fusions:
             self.apply_to_adapter_layers(lambda i, layer: layer.add_fusion_layer(fusion_name))
@@ -387,26 +414,27 @@ class ModelAdaptersMixin(PushAdapterToHubMixin, ABC):
             self.delete_adapter(adapter_name)
         self.config.adapters.add(adapter_name, config=config)
         try:
-            self.apply_to_adapter_layers(lambda i, layer: layer.add_adapter(adapter_name, i))
-            # PHM Layer
-            if self.config.adapters.match(adapter_name, AdapterConfig, location_key="phm_layer"):
-                self._add_shared_parameters(adapter_name, config)
-            # Prefix Tuning
-            for module in self.modules():
-                if isinstance(module, PrefixTuningPool):
-                    module.confirm_prefix(adapter_name)
-            if isinstance(self, InvertibleAdaptersMixin):
-                self.add_invertible_adapter(adapter_name)
+            self._add_adapter_weights(adapter_name)
         except ValueError as ex:
             self.delete_adapter(adapter_name)
             raise ex
         if set_active:
             self.set_active_adapters(adapter_name)
 
-    def _add_shared_parameters(self, adapter_name, adapter_config: AdapterConfig):
-        self.shared_parameters[adapter_name] = (
-            list(self.get_adapter(adapter_name)[0].values())[0].adapter_down[0].init_shared_parameters()
-        )
+    def _add_adapter_weights(self, adapter_name: str):
+        """Helper method that performs the actual parameter additions when adding a new adapter."""
+        self.apply_to_adapter_layers(lambda i, layer: layer.add_adapter(adapter_name, i))
+        # PHM Layer
+        if self.config.adapters.match(adapter_name, AdapterConfig, location_key="phm_layer"):
+            self.shared_parameters[adapter_name] = (
+                list(self.get_adapter(adapter_name)[0].values())[0].adapter_down[0].init_shared_parameters()
+            )
+        # Prefix Tuning
+        for module in self.modules():
+            if isinstance(module, PrefixTuningPool):
+                module.confirm_prefix(adapter_name)
+        if isinstance(self, InvertibleAdaptersMixin):
+            self.add_invertible_adapter(adapter_name)
 
     def add_fusion(self, adapter_names: Union[Fuse, list], adapter_fusion_config=None, override_kwargs=None):
         warnings.warn(
@@ -814,7 +842,7 @@ class ModelAdaptersMixin(PushAdapterToHubMixin, ABC):
         # fill in data for adapters
         for name, config_name in self.config.adapters.adapters.items():
             config = self.config.adapters.config_map[config_name]
-            row = {"name": name, "architecture": config.architecture or "bottleneck"}
+            row = {"name": name, "architecture": config.get("architecture", None) or "bottleneck"}
             weights = self.get_adapter(name)
             row["active"] = self.active_adapters is not None and name in self.active_adapters.flatten()
             # count parameters
@@ -1127,35 +1155,3 @@ class ModelWithHeadsAdaptersMixin(ModelAdaptersMixin):
             return super().get_adapter(name)
         else:
             return self.base_model.get_adapter(name)
-
-    def load_embeddings(self, path: str, name: str):
-        if self.base_model is self:
-            return super().load_embeddings(path, name)
-        else:
-            return self.base_model.load_embeddings(path, name)
-
-    def save_embeddings(self, path, name, tokenizer=None):
-        if self.base_model is self:
-            return super().save_embeddings(path, name, tokenizer)
-        else:
-            return self.base_model.save_embeddings(path, name, tokenizer)
-
-    def add_embeddings(self, name, tokenizer, reference_embedding=None, reference_tokenizer=None, embedding_dim=None):
-        if self.base_model is None:
-            return super().add_embeddings(name, tokenizer, reference_embedding, reference_tokenizer, embedding_dim)
-        else:
-            return self.base_model.add_embeddings(
-                name, tokenizer, reference_embedding, reference_tokenizer, embedding_dim
-            )
-
-    def set_active_embeddings(self, name):
-        if self.base_model is None:
-            return super().set_active_embeddings(name)
-        else:
-            return self.base_model.set_active_embeddings(name)
-
-    def delete_embeddings(self, name):
-        if self.base_model is None:
-            return super().delete_embeddings(name)
-        else:
-            return self.base_model.delete_embeddings(name)
